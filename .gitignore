@@ -1,0 +1,60 @@
+# Sekrety: ignorujemy KAŻDY plik .env (także .env.production i .env.operations.local),
+# a jawnie przepuszczamy tylko szablony .env.example. Wzorzec z wyjątkiem zamiast listy
+# nazw — lista prędzej czy później nie nadąży za nowym plikiem i sekret wjedzie do repo.
+.env*
+!.env.example
+!**/.env.example
+
+# Zależności i cache menedżera paczek
+node_modules/
+# Zostawione świadomie: `apps/server/node_modules_old` realnie leży na dysku, a wzorzec
+# `node_modules/` go NIE łapie. Bez tej linii katalog wychodzi jako nieśledzony.
+node_modules_old*/
+.pnpm-store/
+.npm_cache*
+package-lock.json
+
+# Artefakty buildu
+dist/
+build/
+out/
+.next/
+coverage/
+*.tsbuildinfo
+
+# tsc bez --noEmit wysypuje .js obok źródeł .ts i przesłania moduły. Kontrola w CI łapie
+# tylko pliki NIEŚLEDZONE, a do packages/*/src takie artefakty raz już wjechały na stałe
+# (index.js sprzed BYOK, bez eksportu ai/aiKey). Paczki są w 100% TypeScriptowe.
+packages/*/src/**/*.js
+
+# Konfiguracja lokalnych narzędzi i platform
+.expo/
+.claude/
+.kiro/
+.vscode/
+.DS_Store
+*.log
+
+# Warsztat: agenci, skille i reguły oraz wewnętrzna dokumentacja modułów. Zostają na dysku
+# każdego, kto tu pracuje, ale nie są częścią produktu i nie jadą do repo.
+.agent/
+project_context/
+
+# Prywatne notatki, plany i szkice. Jeden katalog zamiast listy nazw plików: .gitignore
+# jest widoczny publicznie, więc same tytuły też by coś zdradzały.
+_local/
+
+# Zrzuty i kopie bazy. Nigdy nie mają prawa wjechać do repo — to pełne dane użytkowników.
+backup_data/
+*.dump
+*.sql.gz
+
+# `public/` w korzeniu to KATALOG WYJŚCIOWY builda: `pnpm build` kopiuje tam
+# zawartość `apps/web/dist/`, a serwer serwuje ten katalog statycznie. Nic tu nie commitujemy — pliki statyczne
+# trzymamy w `apps/web/public/`, skąd Vite kopiuje je do `dist/`, a stamtąd
+# trafiają tutaj. Bez tej reguły po lokalnym `pnpm build` git widzi dziesiątki
+# nieśledzonych plików builda i łatwo je przypadkiem zacommitować.
+# `.gitkeep` MUSI zostać: git nie przechowuje pustych katalogów, a `cp` z kroku
+# builda przerywa się z „No such file or directory", gdy katalogu nie ma.
+/public/*
+!/public/.gitkeep

@@ -1,0 +1,62 @@
+{
+  "name": "smartportfel-web-open-source",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.3.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "ajv": "^8.18.0",
+    "ajv-keywords": "^5.1.0",
+    "tailwindcss": "^3.4.1"
+  },
+  "workspaces": [
+    "apps/server",
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @smartportfel/shared run build && pnpm --filter @smartportfel/contracts run build && pnpm --filter @smartportfel/web run build && pnpm --filter @smartportfel/server run build && mkdir -p public && cp -r apps/web/dist/. public/",
+    "db:deploy": "pnpm --filter @smartportfel/server run db:deploy",
+    "start": "pnpm --filter @smartportfel/server run start",
+    "dev": "pnpm --filter @smartportfel/server run dev & pnpm --filter @smartportfel/web run dev",
+    "postinstall": "pnpm --filter @smartportfel/shared run build && pnpm --filter @smartportfel/contracts run build"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@prisma/client": "^5.22.0",
+    "ai": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.16.3",
+    "prisma": "^5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.18.0",
+    "ajv-keywords": "^5.1.0",
+    "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "express": "^4.22.1",
+      "drizzle-kit": "0.23.2"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "es5-ext",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  }
+}

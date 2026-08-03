@@ -1,0 +1,767 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Połączenie BEZPOŚREDNIE (non-pooled) do migracji/introspekcji.
+  // Runtime używa pooled DATABASE_URL; `prisma migrate deploy` MUSI omijać pgBouncera,
+  // inaczej advisory lock timeoutuje (błąd P1002). Jeśli Twój hosting daje osobny adres
+  // pooled i direct — tu wpisz direct. Lokalnie: to samo co DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                         String              @id @default(uuid())
+  username                   String              @unique
+  email                      String              @unique
+  password                   String?
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  googleId                   String?             @unique
+  appleId                    String?             @unique
+  // NAGROBEK. Produkt jest darmowy i open source — PRO to jedyna wersja i **nic w kodzie tego
+  // pola nie czyta**. Kolumna jest trzymana świadomie, „na wszelki wypadek"; pozostałe pola
+  // po podziale planów i po Stripie zostały skasowane wraz z kolumnami w bazie.
+  //
+  // Pole MUSI zostać w tym pliku dopóki kolumna jest w bazie: schemat bez pola przy żywej
+  // kolumnie to drift, a wtedy pierwsze `prisma migrate dev` wygeneruje po cichu migrację
+  // kasującą ją. Zostaje NOT NULL z domyślnym PRO.
+  plan                       PlanType            @default(PRO)
+  isEmailVerified            Boolean             @default(false)
+  verificationToken          String?             @unique
+  verificationTokenExpiresAt DateTime?
+  passwordResetToken         String?             @unique
+  passwordResetExpiresAt     DateTime?
+  // Lockout per-konto: brute-force rozproszony po wielu IP omija limit per-IP,
+  // więc licznik nieudanych logowań trzymamy przy koncie (reset przy udanym logowaniu i resecie hasła).
+  failedLoginAttempts        Int                 @default(0)
+  lockedUntil                DateTime?
+  // Wersja sesji: JWT z inną wersją niż w DB jest odrzucany w authenticateToken.
+  // Bump (increment) przy zmianie/resecie hasła unieważnia wszystkie access tokeny od ręki.
+  tokenVersion               Int                 @default(0)
+  mortgages                  Mortgage[]
+  categories                 Category[]
+  expenses                   Expense[]
+  investmentAccounts         InvestmentAccount[]
+  investments                Investment[]
+  monthlyPlans               MonthlyPlan[]
+  onboardingStatus           OnboardingStatus?
+  personalAccounts           PersonalAccount[]
+  ppkConfig                  PPKConfig?
+  ppkTransactions            PPKTransaction[]
+  savingsAccounts            SavingsAccount[]
+  savingsGoals               SavingsGoal[]
+  stores                     Store[]
+  portfolioSnapshots         PortfolioSnapshot[]
+  householdMembership        HouseholdMember?
+  sentInvitations            HouseholdInvitation[] @relation("SentInvitations")
+  mcpTokens                  McpToken[]
+  mcpAuthCodes               McpAuthCode[]
+  refreshTokens              RefreshToken[]
+  gamification               UserGamification?
+  badges                     UserBadge[]
+  aiKey                      UserAiKey?
+
+  @@map("users")
+}
+
+enum AiProvider {
+  GEMINI
+  OPENAI
+}
+
+/// Klucz API użytkownika do funkcji AI (BYOK), zaszyfrowany AES-256-GCM kluczem
+/// z AI_KEY_ENCRYPTION_KEY.
+///
+/// Świadomie OSOBNA tabela, nie kolumny na User: kilka miejsc robi
+/// `prisma.user.findUnique({ where: { id } })` BEZ `select` i rozpakowuje cały wiersz,
+/// więc kolumna z szyfrogramem prędzej czy później wyciekłaby do odpowiedzi HTTP.
+model UserAiKey {
+  id         String     @id @default(uuid())
+  userId     String     @unique
+  provider   AiProvider
+  ciphertext Bytes
+  iv         Bytes
+  authTag    Bytes
+  /// Ostatnie 4 znaki jawnego klucza — wyłącznie do podglądu w UI (••••••••x9Fq).
+  last4      String     @db.VarChar(4)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_ai_keys")
+}
+
+// Token dostępu do serwera MCP (łącznik Claude/Perplexity) — dostępny dla każdego konta.
+// Trzymamy wyłącznie hash; jawny token pokazujemy użytkownikowi raz przy tworzeniu.
+model McpToken {
+  id          String    @id @default(uuid())
+  userId      String
+  tokenHash   String    @unique
+  prefix      String // początek tokenu do rozpoznania na liście (np. "sp_mcp_ab12")
+  name        String?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  // OAuth: tokeny mintowane przez flow OAuth (Perplexity/Claude.ai-web). kind="manual" = token-in-URL z UI.
+  kind        String    @default("manual") // "manual" | "oauth"
+  // Zakres uprawnień (bug I3). "read" = tylko odczyt (token-in-URL, bo URL wycieka do logów);
+  // "write" = pełny (OAuth albo token w nagłówku Authorization: Bearer). Efektywny scope = min(scope, kanał transmisji).
+  scope       String    @default("read") // "read" | "write"
+  clientId    String? // OAuth client_id, jeśli token wydany przez OAuth
+  expiresAt   DateTime? // wygaśnięcie access tokenu OAuth (manual = null = bezterminowy)
+  refreshHash String?   @unique // hash refresh tokenu OAuth
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("mcp_tokens")
+}
+
+// Refresh tokeny dla aplikacji mobilnej (JWT Bearer, długożyjąca sesja).
+// Web korzysta z ciasteczek i tej tabeli NIE używa. Rotacja: przy każdym /auth/refresh
+// stary token jest revoke'owany i wydawany nowy.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// Współdzielony store dla express-rate-limit (middleware/prismaRateLimitStore.ts).
+// W środowisku serverless MemoryStore resetuje się per inwokacja — liczniki muszą żyć w bazie.
+// key = "<prefix>:<ip>", np. "auth:1.2.3.4". Wygasłe wpisy sprząta nocny cron reconcile-balances.
+model RateLimitEntry {
+  key     String   @id
+  hits    Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limit_entries")
+}
+
+// OAuth 2.1: klient zarejestrowany przez Dynamic Client Registration (Perplexity, Claude.ai-web).
+model McpOAuthClient {
+  clientId                String    @id @map("client_id")
+  clientName              String?
+  redirectUris            String[]
+  grantTypes              String[]
+  tokenEndpointAuthMethod String?
+  clientSecret            String? // jawny secret klienta DCR (porównywany plaintext przez SDK na /token); PKCE jest głównym zabezpieczeniem
+  clientSecretExpiresAt   DateTime?
+  createdAt               DateTime  @default(now())
+
+  @@map("mcp_oauth_clients")
+}
+
+// OAuth 2.1: krótkożyciowy kod autoryzacyjny (wydany po zgodzie usera, wymieniany na token w /token).
+model McpAuthCode {
+  id            String    @id @default(uuid())
+  codeHash      String    @unique
+  userId        String
+  clientId      String
+  codeChallenge String
+  redirectUri   String
+  scope         String
+  resource      String?
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("mcp_auth_codes")
+}
+
+// Gospodarstwo domowe — wspólne konta dla pary/rodziny.
+// Użytkownik należy do maks. jednego gospodarstwa (unikalny userId w HouseholdMember).
+model Household {
+  id          String                @id @default(uuid())
+  name        String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  members     HouseholdMember[]
+  invitations HouseholdInvitation[]
+
+  @@map("households")
+}
+
+model HouseholdInvitation {
+  id          String                    @id @default(uuid())
+  householdId String
+  email       String
+  token       String                    @unique
+  status      HouseholdInvitationStatus @default(PENDING)
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime                  @default(now())
+  household   Household                 @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  invitedBy   User                      @relation("SentInvitations", fields: [invitedById], references: [id])
+
+  @@index([householdId])
+  @@index([email])
+  @@map("household_invitations")
+}
+
+enum HouseholdInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model HouseholdMember {
+  id          String        @id @default(uuid())
+  householdId String
+  userId      String        @unique
+  role        HouseholdRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@map("household_members")
+}
+
+enum HouseholdRole {
+  OWNER
+  MEMBER
+}
+
+model Mortgage {
+  id                String            @id @default(uuid())
+  userId            String
+  name              String
+  totalAmount       Decimal           @db.Decimal(19, 4)
+  currentBalance    Decimal           @db.Decimal(19, 4)
+  startDate         DateTime
+  loanType          LoanType          @default(MORTGAGE)
+  installmentType   InstallmentType?
+  termMonths        Int?
+  marginRate        Decimal?          @db.Decimal(9, 4)
+  referenceRate     Decimal?          @db.Decimal(9, 4)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  personalAccountId String?
+  personalAccount   PersonalAccount?  @relation(fields: [personalAccountId], references: [id])
+  user              User              @relation(fields: [userId], references: [id])
+  payments          MortgagePayment[]
+}
+
+enum LoanType {
+  MORTGAGE
+  CASH
+  CAR
+  OTHER
+}
+
+enum InstallmentType {
+  EQUAL
+  DECREASING
+}
+
+model MortgagePayment {
+  id              String   @id @default(uuid())
+  mortgageId      String
+  paymentDate     DateTime
+  totalAmount     Decimal  @db.Decimal(19, 4)
+  principalAmount Decimal  @db.Decimal(19, 4)
+  interestAmount  Decimal  @db.Decimal(19, 4)
+  note            String?
+  createdAt       DateTime @default(now())
+  mortgage        Mortgage @relation(fields: [mortgageId], references: [id], onDelete: Cascade)
+
+  @@index([mortgageId])
+}
+
+model Category {
+  id               Int        @id @default(autoincrement())
+  name             String
+  description      String?
+  color            String?
+  userId           String?
+  icon             String?
+  isSystemCategory Boolean    @default(false)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  user             User?      @relation(fields: [userId], references: [id])
+  expenses         Expense[]
+  planItems        PlanItem[]
+  stores           Store[]
+
+  @@unique([name, userId])
+  @@map("categories")
+}
+
+model Store {
+  id               String     @id @default(uuid())
+  name             String
+  categoryId       Int
+  userId           String?
+  isSystemCategory Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  expenses         Expense[]
+  planItems        PlanItem[]
+  category         Category   @relation(fields: [categoryId], references: [id])
+  user             User?      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, name, categoryId])
+  @@map("stores")
+}
+
+model PersonalAccount {
+  id                String           @id @default(uuid())
+  userId            String
+  name              String
+  bank              String
+  balance           Decimal          @default(0) @db.Decimal(19, 4)
+  isMain            Boolean          @default(false)
+  isSystem          Boolean          @default(false)
+  isMultiCurrency   Boolean          @default(false)
+  isShared          Boolean          @default(false) // widoczne dla członków gospodarstwa domowego
+  type              AccountType      @default(BANK)
+  expiryDate        DateTime?
+  currency          String           @default("PLN")
+  color             String?
+  closedAt          DateTime?        // null = aktywne; data = konto zamknięte tego dnia
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  mortgages         Mortgage[]
+  expenses          Expense[]        @relation("SourceAccount")
+  incomingTransfers Expense[]        @relation("TargetAccount")
+  user              User             @relation(fields: [userId], references: [id])
+  balances          AccountBalance[]
+  planItems         PlanItem[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("personal_accounts")
+}
+
+enum AccountType {
+  BANK
+  CASH
+  LOYALTY_CARD
+  GIFT_CARD
+  VOUCHER
+  INVESTMENT_WALLET
+  OTHER
+}
+
+model AccountBalance {
+  id                String          @id @default(uuid())
+  personalAccountId String
+  currency          String          @default("PLN")
+  balance           Decimal         @default(0) @db.Decimal(19, 4)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  personalAccount   PersonalAccount @relation(fields: [personalAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([personalAccountId, currency])
+  @@map("account_balances")
+}
+
+model SavingsAccount {
+  id                    String    @id @default(uuid())
+  userId                String
+  name                  String
+  bank                  String
+  type                  String
+  balance               Decimal   @default(0) @db.Decimal(19, 4)
+  currency              String    @default("PLN")
+  interestRate          Decimal   @default(0) @db.Decimal(9, 4)
+  capitalizationType    String    @default("DAILY") // DAILY, MONTHLY, END_OF_PERIOD
+  promoEndsAt           DateTime?
+  postPromoInterestRate Decimal?  @db.Decimal(9, 4)
+  depositStartDate      DateTime?
+  depositDurationMonths Int?
+  status                String    @default("ACTIVE") // ACTIVE, FINISHED, SETTLED
+  closedAt              DateTime? // null = aktywne; data = konto zamknięte tego dnia
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  sourceTransfers       Expense[] @relation("SourceSavingsAccount")
+  transfers             Expense[] @relation("TargetSavingsAccount")
+  user                  User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("savings_accounts")
+}
+
+model Expense {
+  id                   String              @id @default(uuid())
+  userId               String
+  amount               Decimal             @db.Decimal(19, 4)
+  currency             String              @default("PLN")
+  originalAmount       Decimal?            @db.Decimal(19, 4)
+  exchangeRate         Decimal?            @db.Decimal(19, 8)
+  plnAmount            Decimal?            @db.Decimal(19, 4)
+  targetCurrency       String?
+  targetAmount         Decimal?            @db.Decimal(19, 4)
+  description          String
+  categoryId           Int?
+  transactionDate      DateTime
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  fromSavingsAccountId String?
+  investmentId         String?
+  note                 String?
+  personalAccountId    String?
+  savingsAccountId     String?
+  savingsGoalId        String?
+  store                String?
+  toPersonalAccountId  String?
+  type                 String              @default("expense")
+  investmentAccountId  String?
+  isRecurring          Boolean             @default(false)
+  recurrenceInterval   RecurrenceInterval?
+  recurrenceEndDate    DateTime?
+  storeId              String?
+  category             Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  fromSavingsAccount   SavingsAccount?     @relation("SourceSavingsAccount", fields: [fromSavingsAccountId], references: [id])
+  investmentAccount    InvestmentAccount?  @relation("AccountIncome", fields: [investmentAccountId], references: [id])
+  investment           Investment?         @relation("InvestmentTransfers", fields: [investmentId], references: [id])
+  personalAccount      PersonalAccount?    @relation("SourceAccount", fields: [personalAccountId], references: [id])
+  savingsAccount       SavingsAccount?     @relation("TargetSavingsAccount", fields: [savingsAccountId], references: [id])
+  savingsGoal          SavingsGoal?        @relation(fields: [savingsGoalId], references: [id])
+  storeRef             Store?              @relation(fields: [storeId], references: [id])
+  toPersonalAccount    PersonalAccount?    @relation("TargetAccount", fields: [toPersonalAccountId], references: [id])
+  user                 User                @relation(fields: [userId], references: [id])
+  linkedPlanItem       PlanItem?           @relation("LinkedExpense")
+  planItems            PlanItem[]          @relation("RecurringTemplate")
+
+  @@index([userId, transactionDate])
+  @@index([userId, type])
+  @@index([categoryId])
+  @@index([storeId])
+  @@index([personalAccountId])
+  @@index([toPersonalAccountId])
+  @@index([savingsAccountId])
+  @@index([fromSavingsAccountId])
+  @@index([investmentAccountId])
+  @@index([investmentId])
+  @@map("expenses")
+}
+
+enum RecurrenceInterval {
+  MONTHLY
+  ANNUALLY
+}
+
+model SavingsGoal {
+  id              String    @id @default(uuid())
+  userId          String
+  name            String
+  targetAmount    Decimal   @db.Decimal(19, 4)
+  allocatedAmount Decimal   @default(0) @db.Decimal(19, 4)
+  isMain          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  expenses        Expense[]
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@map("savings_goals")
+}
+
+model InvestmentAccount {
+  id              String       @id @default(uuid())
+  userId          String
+  name            String
+  provider        String
+  balance         Decimal      @default(0) @db.Decimal(19, 4)
+  currency        String       @default("PLN")
+  accountType     String       @default("STANDARD") // STANDARD | IKE | IKZE — konta emerytalne z limitem rocznym
+  ikzeBusiness    Boolean      @default(false) // IKZE: wyższy limit dla prowadzących działalność gospodarczą
+  closedAt        DateTime?    // null = aktywne; data = konto zamknięte tego dnia
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  incomeTransfers Expense[]    @relation("AccountIncome")
+  user            User         @relation(fields: [userId], references: [id])
+  investments     Investment[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("investment_accounts")
+}
+
+model Investment {
+  id               String              @id @default(uuid())
+  userId           String
+  quantity         Decimal             @default(1) @db.Decimal(28, 10)
+  purchasePrice    Decimal             @db.Decimal(19, 4)
+  purchaseDate     DateTime
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  currentValue     Decimal             @db.Decimal(19, 4)
+  name             String
+  accountId        String?
+  bondDuration     Int?
+  bondInterestRate Decimal?            @db.Decimal(9, 4)
+  country          String?
+  type             String?
+  currency         String              @default("PLN")
+  instrumentId     String?
+  soldAt           DateTime?           // null = pozycja aktywna; data = lot sprzedany tego dnia
+  salePrice        Decimal?            @db.Decimal(19, 4) // cena sprzedaży za jednostkę (w walucie instrumentu)
+  transfers        Expense[]           @relation("InvestmentTransfers")
+  account          InvestmentAccount?  @relation(fields: [accountId], references: [id])
+  isHistorical     Boolean             @default(false)
+  user             User                @relation(fields: [userId], references: [id])
+  history          InvestmentHistory[]
+  instrument       Instrument?         @relation(fields: [instrumentId], references: [id])
+
+  @@map("investments")
+}
+
+model InvestmentHistory {
+  id            String     @id @default(uuid())
+  investmentId  String
+  date          DateTime   @default(now())
+  quantity      Decimal    @db.Decimal(28, 10)
+  purchasePrice Decimal    @db.Decimal(19, 4)
+  marketValue   Decimal    @db.Decimal(19, 4)
+  createdAt     DateTime   @default(now())
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@map("investments_history")
+}
+
+model PortfolioSnapshot {
+  id         String   @id @default(uuid())
+  userId     String
+  date       DateTime @db.Date // Only date part matters
+  totalValue Decimal  @db.Decimal(19, 4) // Total value in user's base currency (PLN)
+  totalCost  Decimal  @db.Decimal(19, 4) // Total cost basis
+
+  // Snapshots of individual components (optional for breakdown)
+  cashValue   Decimal @default(0) @db.Decimal(19, 4)
+  stockValue  Decimal @default(0) @db.Decimal(19, 4)
+  cryptoValue Decimal @default(0) @db.Decimal(19, 4)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date]) // One snapshot per user per day
+  @@map("portfolio_snapshots")
+}
+
+model Instrument {
+  id        String   @id @default(uuid())
+  symbol    String   @unique
+  name      String
+  type      String // Stock, ETF, Crypto
+  currency  String // USD, EUR, PLN, GBP
+  exchange  String? // NASDAQ, NYSE, GPW, LSE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  investments Investment[]
+  prices      InstrumentPriceHistory[] // Changed from Cache to History for clarity
+
+  @@map("instruments")
+}
+
+model InstrumentPriceHistory {
+  id           String   @id @default(uuid())
+  instrumentId String
+  price        Decimal  @db.Decimal(19, 4)
+  date         DateTime @db.Date
+
+  // Dane dodatkowe z dostawcy notowań — opcjonalne, nie każdy je zwraca
+  open   Decimal? @db.Decimal(19, 4)
+  high   Decimal? @db.Decimal(19, 4)
+  low    Decimal? @db.Decimal(19, 4)
+  volume BigInt?
+
+  createdAt DateTime @default(now())
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, date]) // One price per instrument per day
+  @@index([date])
+  @@map("instrument_price_history")
+}
+
+model PPKConfig {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  grossSalary  Decimal  @db.Decimal(19, 4)
+  employeeRate Decimal  @default(2) @db.Decimal(9, 4)
+  employerRate Decimal  @default(1.5) @db.Decimal(9, 4)
+  startDate    DateTime
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("ppk_config")
+}
+
+model PPKTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime
+  type        String
+  amount      Decimal  @db.Decimal(19, 4)
+  grossSalary Decimal? @db.Decimal(19, 4)
+  taxAmount   Decimal  @default(0) @db.Decimal(19, 4)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+  @@map("ppk_transactions")
+}
+
+model MonthlyPlan {
+  id                   String     @id @default(uuid())
+  userId               String
+  month                Int
+  year                 Int
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  excludedRecurringIds String[]   @default([])
+  user                 User       @relation(fields: [userId], references: [id])
+  items                PlanItem[]
+
+  @@unique([userId, month, year])
+  @@map("monthly_plans")
+}
+
+model PlanItem {
+  id                  String           @id @default(uuid())
+  planId              String
+  name                String
+  amount              Decimal          @db.Decimal(19, 4)
+  currency            String           @default("PLN")
+  isDone              Boolean          @default(false)
+  recurringExpenseId  String?
+  linkedRealExpenseId String?          @unique
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  categoryId          Int?
+  note                String?
+  personalAccountId   String?
+  plannedDate         DateTime?
+  storeId             String?
+  type                String           @default("expense")
+  category            Category?        @relation(fields: [categoryId], references: [id])
+  linkedRealExpense   Expense?         @relation("LinkedExpense", fields: [linkedRealExpenseId], references: [id])
+  plan                MonthlyPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  personalAccount     PersonalAccount? @relation(fields: [personalAccountId], references: [id])
+  recurringExpense    Expense?         @relation("RecurringTemplate", fields: [recurringExpenseId], references: [id])
+  store               Store?           @relation(fields: [storeId], references: [id])
+
+  @@index([planId])
+  @@map("plan_items")
+}
+
+model OnboardingStatus {
+  id               String  @id @default(uuid())
+  userId           String  @unique
+  accountsDone     Boolean @default(false)
+  firstExpenseDone Boolean @default(false)
+  goalsDone        Boolean @default(false)
+  user             User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_status")
+}
+
+// Gamifikacja — denormalizowany stan serii i progresji użytkownika (1:1 z User).
+// Etap 1 używa pól serii (currentStreakWeeks/longestStreakWeeks/lastActiveWeek)
+// oraz lastSeenBadgeAt; points/level/freezeTokens są pod kolejne etapy.
+model UserGamification {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  currentStreakWeeks Int       @default(0)
+  longestStreakWeeks Int       @default(0)
+  lastActiveWeek     String? // ISO np. "2026-W26" (granice tygodnia w Europe/Warsaw)
+  lastSeenBadgeAt    DateTime? // do wykrycia "nowej" odznaki w UI (celebracja)
+  points             Int       @default(0) // Etap 2
+  level              Int       @default(1) // Etap 2
+  freezeTokens       Int       @default(0) // Etap 4
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_gamification")
+}
+
+// Odblokowane odznaki. Katalog (klucze, nazwy, kryteria) żyje w kodzie
+// (services/gamificationService.ts), nie w DB — łatwe wersjonowanie.
+model UserBadge {
+  id         String   @id @default(uuid())
+  userId     String
+  badgeKey   String
+  progress   Float? // dla odznak progresywnych (opcjonalne)
+  unlockedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeKey])
+  @@index([userId])
+  @@map("user_badges")
+}
+
+// Trzymany razem z kolumną `User.plan` — patrz nagrobek przy tym polu.
+enum PlanType {
+  LITE
+  PRO
+}
+
+// Ślad audytowy operacji wrażliwych (auth, płatności, usunięcia).
+// Celowo bez relacji do User — wpisy mają przetrwać usunięcie konta (spory billingowe).
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  resource  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// Zaakceptowany drift sald (głównie salda otwarcia kont bez transakcji startowej).
+// Cron rekoncyliacji alarmuje tylko, gdy bieżący drift różni się od baseline.
+model BalanceDriftBaseline {
+  id          String   @id @default(uuid())
+  accountType String // 'personal' | 'savings'
+  accountId   String
+  currency    String   @default("") // "" dla kont oszczędnościowych (bez wymiaru waluty)
+  drift       Decimal  @db.Decimal(19, 4)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([accountType, accountId, currency])
+  @@map("balance_drift_baseline")
+}
+
+// Cache kursów NBP (tabela A, mid). Serwuje "ostatni znany kurs", gdy NBP jest
+// niedostępny — zamiast cichego fallbacku 1:1 (bug I2). Grzany codziennie przez
+// cron refresh-prices dla SUPPORTED_CURRENCIES; upsertowany przy każdym udanym
+// pobraniu z NBP. Wzorzec: InstrumentPriceHistory.
+model ExchangeRate {
+  id        String   @id @default(uuid())
+  currency  String // np. 'USD' — kurs 1 jednostki waluty do PLN
+  date      DateTime @db.Date
+  rate      Decimal  @db.Decimal(19, 8) // mid z NBP
+  fetchedAt DateTime @default(now())
+
+  @@unique([currency, date]) // Jeden kurs na walutę na dzień
+  @@index([currency, date])
+  @@map("exchange_rates")
+}

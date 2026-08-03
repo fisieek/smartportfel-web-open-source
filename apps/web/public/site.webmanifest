@@ -1,0 +1,17 @@
+{
+  "name": "SmartPortfel — budżet domowy i finanse",
+  "short_name": "SmartPortfel",
+  "description": "Agreguj budżet domowy, oszczędności, inwestycje i kredyty w jednym miejscu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "lang": "pl",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

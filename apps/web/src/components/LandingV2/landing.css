@@ -1,0 +1,770 @@
+/* ============ SmartPortfel Landing V2 ============ */
+
+.lp {
+  --lp-bg: #050507;
+  --lp-surface: rgba(255, 255, 255, 0.04);
+  --lp-border: rgba(255, 255, 255, 0.08);
+  --lp-text: #f5f5f7;
+  --lp-muted: rgba(245, 245, 247, 0.55);
+  --lp-emerald: #34d399;
+  --lp-cyan: #22d3ee;
+  --lp-violet: #a78bfa;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: var(--lp-bg);
+  color: var(--lp-text);
+}
+
+.lp-display {
+  font-family: 'Space Grotesk', 'Outfit', system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+/* ---- Animated aurora blobs ---- */
+.lp-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lp-aurora__blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+  animation: lp-drift 22s ease-in-out infinite alternate;
+}
+
+.lp-aurora__blob--1 {
+  width: 55vw;
+  height: 55vw;
+  max-width: 760px;
+  max-height: 760px;
+  left: -12%;
+  top: -18%;
+  background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.55), transparent 65%);
+}
+
+.lp-aurora__blob--2 {
+  width: 48vw;
+  height: 48vw;
+  max-width: 680px;
+  max-height: 680px;
+  right: -14%;
+  top: 4%;
+  background: radial-gradient(circle at 60% 40%, rgba(34, 211, 238, 0.45), transparent 65%);
+  animation-delay: -7s;
+  animation-duration: 26s;
+}
+
+.lp-aurora__blob--3 {
+  width: 42vw;
+  height: 42vw;
+  max-width: 560px;
+  max-height: 560px;
+  left: 28%;
+  bottom: -28%;
+  background: radial-gradient(circle at 50% 50%, rgba(167, 139, 250, 0.4), transparent 65%);
+  animation-delay: -14s;
+  animation-duration: 30s;
+}
+
+@keyframes lp-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6vw, -4vh, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-4vw, 5vh, 0) scale(0.95);
+  }
+}
+
+/* ---- Film grain ---- */
+.lp-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ---- Animated gradient text ---- */
+.lp-gradient-text {
+  background: linear-gradient(100deg, #34d399 0%, #22d3ee 30%, #a78bfa 60%, #34d399 100%);
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-gradient-pan 7s linear infinite;
+}
+
+@keyframes lp-gradient-pan {
+  to {
+    background-position: 240% 0;
+  }
+}
+
+/* ---- Conic border glow for cards ---- */
+.lp-glow-card {
+  position: relative;
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s;
+}
+
+.lp-glow-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    480px circle at var(--lp-mx, 50%) var(--lp-my, 50%),
+    rgba(52, 211, 153, 0.12),
+    transparent 45%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.lp-glow-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-4px);
+}
+
+.lp-glow-card:hover::before {
+  opacity: 1;
+}
+
+/* ---- Hero CTA ---- */
+.lp-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: #f5f5f7;
+  color: #09090b;
+  font-weight: 600;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s;
+}
+
+.lp-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px rgba(52, 211, 153, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.lp-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--lp-border);
+  color: var(--lp-text);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s, background 0.3s, transform 0.3s;
+}
+
+.lp-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+/* ---- Marquee ---- */
+.lp-marquee {
+  display: flex;
+  width: max-content;
+  animation: lp-marquee 32s linear infinite;
+}
+
+@keyframes lp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---- Hero screenshot frame ---- */
+.lp-screen-frame {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 30px 80px -20px rgba(0, 0, 0, 0.8),
+    0 0 120px -30px rgba(52, 211, 153, 0.25);
+  overflow: hidden;
+}
+
+/* ---- Scroll progress bar ---- */
+.lp-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--lp-emerald), var(--lp-cyan), var(--lp-violet));
+  z-index: 10001;
+}
+
+/* ---- Section label ---- */
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--lp-muted);
+}
+
+.lp-eyebrow::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--lp-emerald), transparent);
+}
+
+/* ---- Animacja wejścia hero — czysty CSS, zero JS ----
+   Wcześniej robił to timeline GSAP, przez co tekst nad linią załamania czekał na
+   pobranie i wykonanie ~45 KB gz biblioteki. Keyframes startują z samego HTML+CSS,
+   więc animacja gra ZAWSZE i wcześniej niż wtedy, a treść nie jest już zakładnikiem
+   bundla. `backwards` odtwarza stan początkowy w czasie `animation-delay`, dzięki
+   czemu nie potrzeba osobnej reguły `opacity: 0` — a taka reguła była właśnie tym,
+   co przy niedowiezionym JS zostawiało pustą stronę.
+   Opóźnienia (stagger) idą z markupu przez `--lp-delay`. */
+@keyframes lp-hero-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lp-hero-line {
+  from { opacity: 0; transform: translateY(60px) rotateX(35deg); }
+  to   { opacity: 1; transform: translateY(0) rotateX(0deg); }
+}
+
+@keyframes lp-hero-sub {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lp-hero-screen {
+  from { opacity: 0; transform: translateY(90px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes lp-hero-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp [data-hero] {
+    /* odpowiednik power3.out z dawnego timeline'u GSAP */
+    animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+    animation-delay: var(--lp-delay, 0s);
+    animation-fill-mode: backwards;
+    animation-duration: 0.8s;
+  }
+
+  .lp [data-hero='badge'] { animation-name: lp-hero-rise; }
+  .lp [data-hero='line'] { animation-name: lp-hero-line; animation-duration: 1.1s; }
+  .lp [data-hero='sub'] { animation-name: lp-hero-sub; animation-duration: 0.9s; }
+  .lp [data-hero='cta'] { animation-name: lp-hero-rise; }
+  .lp [data-hero='screen'] { animation-name: lp-hero-screen; animation-duration: 1.3s; }
+  .lp [data-hero='marquee'] { animation-name: lp-hero-fade; animation-duration: 1s; }
+}
+
+/* ---- Reveal helpers (GSAP sets final state; this is the pre-state) ----
+   Pre-stan obowiązuje WYŁĄCZNIE pod klasą `.lp-anim`, którą JS zakłada
+   synchronicznie (useLayoutEffect) tuż przed uruchomieniem animacji.
+   Wcześniej `opacity: 0` był bezwarunkowy, więc każda sytuacja, w której GSAP
+   nie dojechał (wolne łącze, adblock, CSP, karta w tle głodząca rAF), zostawiała
+   użytkownika z pustą stroną — to był główny objaw „strona nie działa". */
+.lp-anim[data-lp-reveal],
+.lp-anim [data-lp-reveal] {
+  opacity: 0;
+  transform: translateY(36px);
+}
+
+.lp-anim[data-lp-reveal-x],
+.lp-anim [data-lp-reveal-x] {
+  opacity: 0;
+  transform: translateX(var(--lp-rx, -48px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Przy reduced-motion JS w ogóle nie zakłada `.lp-anim`, więc pre-stan nie
+     obowiązuje — ta reguła jest tylko pasem bezpieczeństwa. Animacja hero jest
+     wyłączona samą konstrukcją @media (prefers-reduced-motion: no-preference). */
+  .lp-anim [data-lp-reveal],
+  .lp-anim [data-lp-reveal-x] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-aurora__blob,
+  .lp-gradient-text,
+  .lp-marquee {
+    animation: none;
+  }
+
+  .lp-showcase-particle,
+  .lp-showcase-glow {
+    animation: none;
+  }
+
+  .lp-showcase-frame {
+    transform: none !important;
+  }
+}
+
+/* ================================================================
+   3D SHOWCASE – Interactive UI Widgets
+   ================================================================ */
+
+/* ---- Floating 3D frame ---- */
+.lp-showcase-frame {
+  position: relative;
+  perspective: 1200px;
+}
+
+.lp-showcase-inner {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    145deg,
+    rgba(10, 12, 16, 0.95) 0%,
+    rgba(8, 10, 14, 0.98) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 40px 100px -20px rgba(0, 0, 0, 0.85),
+    0 0 80px -20px var(--showcase-glow, rgba(52, 211, 153, 0.2));
+  overflow: hidden;
+  will-change: transform;
+  transition: box-shadow 0.5s ease;
+}
+
+.lp-showcase-inner:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 50px 120px -20px rgba(0, 0, 0, 0.9),
+    0 0 120px -20px var(--showcase-glow, rgba(52, 211, 153, 0.35));
+}
+
+/* ---- Window chrome (macOS-like dots) ---- */
+.lp-showcase-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lp-showcase-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- Parallax layers ---- */
+.lp-showcase-layer {
+  position: relative;
+}
+
+/* ---- Stat card with glassmorphism ---- */
+.lp-stat-card {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  padding: 14px 16px;
+  overflow: hidden;
+}
+
+.lp-stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at 20% 20%,
+    rgba(255, 255, 255, 0.06),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.lp-stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 6px;
+}
+
+.lp-stat-value {
+  font-family: 'Space Grotesk', 'Outfit', system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f5f5f7;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.lp-stat-sub {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 2px;
+}
+
+/* ---- Mini table ---- */
+.lp-mini-table {
+  width: 100%;
+  border-spacing: 0;
+}
+
+.lp-mini-table-header {
+  display: grid;
+  grid-template-columns: 90px 1fr 100px 80px 90px;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.lp-mini-table-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 100px 80px 90px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.2s;
+}
+
+.lp-mini-table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lp-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.lp-mini-badge--income {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.lp-mini-badge--expense {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.lp-mini-badge--insurance {
+  background: rgba(167, 139, 250, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.lp-mini-badge--food {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+/* ---- Floating ambient particles ---- */
+.lp-showcase-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.lp-showcase-particle {
+  position: absolute;
+  width: var(--p-size, 3px);
+  height: var(--p-size, 3px);
+  border-radius: 50%;
+  background: var(--p-color, rgba(52, 211, 153, 0.5));
+  opacity: 0;
+  animation: lp-particle-float var(--p-dur, 6s) ease-in-out var(--p-delay, 0s) infinite;
+}
+
+@keyframes lp-particle-float {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateX(0) scale(0.5);
+  }
+  20% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.4;
+    transform: translateY(-30px) translateX(15px) scale(1);
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) translateX(-10px) scale(0.3);
+  }
+}
+
+/* ---- Ambient glow under frames ---- */
+.lp-showcase-glow {
+  position: absolute;
+  width: 70%;
+  height: 60%;
+  left: 15%;
+  bottom: -15%;
+  border-radius: 50%;
+  background: var(--showcase-glow, rgba(52, 211, 153, 0.2));
+  filter: blur(60px);
+  opacity: 0.5;
+  animation: lp-glow-pulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes lp-glow-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.55; }
+}
+
+/* ---- Showcase toolbar (Import, Wpływ, Dodaj buttons) ---- */
+.lp-showcase-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-showcase-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.lp-showcase-btn--primary {
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
+  border-color: rgba(20, 184, 166, 0.3);
+  color: #fff;
+}
+
+/* ---- Sparkline chart ---- */
+.lp-sparkline-path {
+  stroke-dasharray: var(--spark-len, 600);
+  stroke-dashoffset: var(--spark-len, 600);
+}
+
+.lp-sparkline-area {
+  opacity: 0;
+}
+
+/* ---- Filter bar ---- */
+.lp-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lp-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+/* ---- Gain badge ---- */
+.lp-gain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: #34d399;
+}
+
+/* ---- Progress bar (mortgage) ---- */
+.lp-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.lp-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d9488, #14b8a6, #22d3ee);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.4);
+  transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- Responsive: simpler grid on small screens ---- */
+@media (max-width: 640px) {
+  .lp-mini-table-header,
+  .lp-mini-table-row {
+    grid-template-columns: 70px 1fr 70px;
+  }
+
+  .lp-mini-table-header > :nth-child(4),
+  .lp-mini-table-header > :nth-child(5),
+  .lp-mini-table-row > :nth-child(4),
+  .lp-mini-table-row > :nth-child(5) {
+    display: none;
+  }
+
+  .lp-stat-value {
+    font-size: 13px;
+  }
+}
+
+/* ================================================================
+   WYŁĄCZANIE CIĄGŁYCH ANIMACJI
+
+   UWAGA NA POŁOŻENIE: te bloki MUSZĄ zostać na końcu pliku. Selektory mają tę samą
+   swoistość co definicje, które nadpisują (pojedyncza klasa), więc rozstrzyga
+   kolejność. Blok `prefers-reduced-motion` w górnej części pliku (~l. 312) próbował
+   wyciszyć `.lp-showcase-glow` i `.lp-showcase-particle`, ale obie definicje są
+   niżej (~l. 550+) — i po cichu wygrywały. Poświaty pulsowały mimo „ogranicz
+   animacje". Dlatego te reguły siedzą tutaj, a nie tam.
+   ================================================================ */
+
+/* Telefony: gasimy to, co rysuje się BEZ PRZERWY.
+
+   Rozmycie to najdroższa rzecz, jaką GPU telefonu może narysować, ale płaci się za
+   nie RAZ — dopóki rozmyty element się nie zmienia, warstwa jest zrasteryzowana
+   i dalej tylko sklejana. Animacja unieważnia ją w każdej klatce, więc telefon
+   przelicza gaussa 60 razy na sekundę, w kółko, także dla elementów daleko poza
+   ekranem (landing ma przy 375 px prawie 15 000 px wysokości).
+
+   Na stronie było tego dziewięć: 5 plam aurory po blur(90px), które się przesuwają,
+   i 4 poświaty pod makietami po blur(60px), które pulsują krycie. To one zjadały
+   budżet klatki, przez co scroll i wjeżdżanie treści dostawały resztki.
+
+   Wygląd zostaje — rozmycia i poświaty są nadal na miejscu, tylko nieruchome.
+   Marquee celowo ZOSTAJE: animuje `transform`, więc jedzie na wątku kompozytora
+   i nie rywalizuje o budżet klatki tak jak przerysowywane rozmycie. */
+@media (max-width: 640px) {
+  .lp-aurora__blob,
+  .lp-showcase-glow,
+  .lp-gradient-text {
+    animation: none;
+  }
+
+  /* 28 kropek, każda z własną animacją w nieskończoność. Przy tej szerokości
+     i tak są poniżej progu zauważalności — taniej usunąć niż zatrzymać. */
+  .lp-showcase-particles {
+    display: none;
+  }
+
+  /* Bez własnego tła, więc na ciemnej stronie to rozmycie i tak nic nie wnosi —
+     a każdy przewijany za przyciskiem piksel trzeba przez nie przepuścić. */
+  .lp-btn-ghost {
+    backdrop-filter: none;
+  }
+
+  /* Animacja wejścia hero — TO było „strona ładuje się sto lat".
+     9 elementów wjeżdża z opóźnieniem 0,1–1,3 s i trwaniem 0,8–1,3 s, więc ostatni
+     pokazuje się 2,3 s po zastosowaniu arkusza, a `animation-fill-mode: backwards`
+     trzyma każdy z nich na `opacity: 0` przez CAŁY czas jego opóźnienia. Landing
+     jest prerenderowany — treść leży w HTML gotowa od pierwszej klatki i czeka
+     wyłącznie na te opóźnienia. Użytkownik widzi czarny ekran przez ~0,9 s, mimo
+     że przeglądarka ma wszystko do narysowania.
+
+     Na desktopie to ładny efekt wejścia i zostaje. Na telefonie liczy się to, jak
+     szybko WIDAĆ treść, więc pokazujemy ją natychmiast.
+
+     Swoistość jest równa regułom w bloku `no-preference` wyżej (klasa + atrybut),
+     więc rozstrzyga kolejność — dlatego to musi zostać na końcu pliku. */
+  .lp [data-hero] {
+    animation: none;
+  }
+
+  /* Makiety: pre-stan `opacity-0` jest wpisany W MARKUP, więc siedzi także
+     w prerenderowanym HTML — 35 elementów, które odsłania dopiero JS po
+     hydracji Reacta. Strona maluje się dużo wcześniej niż dojedzie i wykona
+     się bundle, więc użytkownik ogląda puste ramki makiet, mając całą treść
+     już w przeglądarce. Widać to wprost na nagraniu z telefonu: hero gotowe
+     w 3,7 s, a makieta pusta jeszcze w 5,2 s.
+
+     Na telefonie i tak nie animujemy (`animationsDisabled`), więc ten pre-stan
+     nie ma tu żadnego zadania — zdejmujemy go arkuszem, czyli od PIERWSZEJ
+     klatki i bez udziału JS. `dropOpacityPreState()` zostaje nietknięte: nadal
+     obsługuje szerokie ekrany, na których GSAP może nie dojechać.
+
+     Zakres celowo zawężony do `.lp-showcase-frame`, a nie całego `.lp`: poza
+     makietami `opacity-0` bywa używane do INNYCH celów. W sekcji cennika jest
+     np. niewidoczna kopia tekstu z `aria-hidden`, która tylko rezerwuje miejsce,
+     żeby układ nie skakał — odsłonięcie jej pokazałoby zdublowany akapit.
+
+     Swoistość (0,2,0) bije `.opacity-0` Tailwinda (0,1,0), więc działa
+     niezależnie od kolejności arkuszy. */
+  .lp-showcase-frame .opacity-0 {
+    opacity: 1;
+  }
+}
+
+/* Domknięcie bloku reduced-motion z góry pliku — patrz nagłówek tej sekcji. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-showcase-glow,
+  .lp-showcase-particle {
+    animation: none;
+  }
+}

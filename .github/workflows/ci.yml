@@ -1,0 +1,120 @@
+name: CI
+# Build, testy, lint i skan sekretów przy każdym pushu i pull requeście na main.
+# Uwaga: żaden krok NIE łączy się z bazą danych — obie suity testów są w pełni
+# odizolowane (mocki Prismy), a atrapowy DATABASE_URL zaspokaja tylko walidację
+# środowiska. CI nigdy nie dotyka produkcji.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Nowy push na tę samą gałąź anuluje poprzedni, jeszcze trwający przebieg.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Wartości-atrapy. Prisma waliduje FORMAT adresu przy generowaniu klienta,
+  # ale testy nie nawiązują połączenia — host celowo nie istnieje.
+  DATABASE_URL: postgresql://ci:ci@127.0.0.1:5433/ci_nonexistent
+  DIRECT_URL: postgresql://ci:ci@127.0.0.1:5433/ci_nonexistent
+
+jobs:
+  build-test-lint:
+    name: Build, testy i lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # Musi stać PRZED setup-node: cache pnpm-owe potrzebuje binarki pnpm na ścieżce.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # `--frozen-lockfile` jak w skrypcie `build`: rozjechany lockfile ma paść tutaj,
+      # a nie dopiero na pierwszym kroku wdrożenia.
+      - name: Instalacja zależności
+        run: pnpm install --frozen-lockfile
+
+      # Web i serwer importują z tych paczek po `dist/`, więc muszą powstać pierwsze.
+      - name: Build paczek współdzielonych
+        run: |
+          pnpm --filter @smartportfel/shared build
+          pnpm --filter @smartportfel/contracts build
+
+      # UWAGA: `--noEmit` jest OBOWIĄZKOWE. Bez tej flagi tsc wysypuje setki plików
+      # .js obok źródeł .ts — przesłaniają moduły, testy omijają mocki i sypią się
+      # na prawdziwej bazie.
+      - name: Typy serwera
+        run: npx tsc -p apps/server/tsconfig.json --noEmit
+
+      - name: Testy serwera
+        run: pnpm --filter @smartportfel/server test
+
+      - name: Testy weba
+        run: pnpm --filter @smartportfel/web test
+
+      - name: Lint weba
+        run: pnpm --filter @smartportfel/web lint
+
+      # `tsc -b` + vite + prerender landinga. Build mode łapie błędy typów, które
+      # `tsc --noEmit` potrafi przepuścić przez cache trybu incremental.
+      - name: Build weba
+        run: pnpm --filter @smartportfel/web build
+
+      # Emisja plików .js do drzewa źródeł oznacza, że któryś krok zgubił --noEmit.
+      # Lepiej dowiedzieć się tego tutaj niż z sypiących się testów na czyimś PR-ze.
+      - name: Kontrola — brak wyemitowanych .js w źródłach
+        run: |
+          STRAYS=$(git status --porcelain | grep -E '^\?\? .*\.js$' || true)
+          if [ -n "$STRAYS" ]; then
+            echo "Build wyemitował pliki .js do drzewa źródeł:"
+            echo "$STRAYS"
+            exit 1
+          fi
+
+  gitleaks:
+    name: Skan sekretów
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 jest KONIECZNE dla skanu commitów niżej — domyślny checkout
+      # jest płytki (jeden commit), a wtedy zakres `base..HEAD` nie istnieje.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Świadomie binarka, a nie `gitleaks-action` — ta ostatnia wymaga płatnego
+      # GITLEAKS_LICENSE dla repozytoriów należących do organizacji.
+      - name: Instalacja gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          set -euo pipefail
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks version
+
+      - name: Skan drzewa roboczego
+        run: ./gitleaks dir . --config .gitleaks.toml --redact --verbose --exit-code 1
+
+      # Drzewo robocze to za mało: sekret WRZUCONY i USUNIĘTY w kolejnym commicie tego
+      # samego PR-a zostaje w historii, a `gitleaks dir` widzi tylko pliki na dysku.
+      # Klasyczny przypadek to plik pomocniczy w rodzaju `.env.bak` — dodany „na chwilę",
+      # skasowany w następnym commicie i żyjący dalej w historii gałęzi.
+      # Skanujemy WYŁĄCZNIE commity tego PR-a, żeby przebieg nie zależał od długości historii.
+      - name: Skan commitów z tego PR-a
+        if: github.event_name == 'pull_request'
+        run: |
+          ./gitleaks git . \
+            --config .gitleaks.toml \
+            --log-opts "${{ github.event.pull_request.base.sha }}..HEAD" \
+            --redact --verbose --exit-code 1

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#0B0B0F" />
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- Tło ustawione inline, zanim dojedzie blokujący index-*.css (~20 KB gz).
+       Bez tego pierwszy paint jest biały, mimo że cała witryna jest ciemna. -->
+  <style>
+    html,
+    body {
+      background-color: #0B0B0F;
+      color: #FFFFFF;
+      margin: 0;
+    }
+
+    /* Siatka bezpieczeństwa: w index.html siedzi prerenderowany landing, a należy
+       on wyłącznie do `/` (poza nim serwowana jest skorupa index.shell.html —
+       catch-all SPA w serwerze). Gdyby jakaś trasa dostała jednak ten plik, landing
+       ma być niewidoczny od pierwszej klatki, zanim JS podmieni zawartość. */
+    .not-landing #root {
+      display: none;
+    }
+  </style>
+  <script>
+    if (location.pathname !== '/') document.documentElement.classList.add('not-landing');
+  </script>
+
+  <title>SmartPortfel – Budżet domowy i śledzenie wydatków | Darmowa aplikacja</title>
+  <meta name="description"
+    content="SmartPortfel to polska aplikacja do zarządzania budżetem domowym. Śledź wydatki, inwestycje i kredyty w jednym miejscu. Zacznij za darmo!" />
+
+  <!-- Open Graph / Facebook.
+       BEZ og:url i og:image z pełnym adresem — ten kod stoi pod dowolną domeną, a zaszyty
+       adres kazałby każdej instancji ogłaszać cudzą witrynę. Scrapery, które nie znajdą
+       og:url, biorą adres pobieranej strony; obrazek podajemy ścieżką względną, którą
+       zdecydowana większość z nich rozwija względem tego samego adresu.
+       Chcesz mieć pewność co do podglądów linków? Ustaw `CLIENT_URL` — wtedy serwerowe
+       wstrzykiwanie meta (apps/server/src/seo/seo.ts) wystawi pełne adresy. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="SmartPortfel" />
+  <meta property="og:locale" content="pl_PL" />
+  <meta property="og:title" content="SmartPortfel – Budżet domowy i śledzenie wydatków | Darmowa aplikacja" />
+  <meta property="og:description"
+    content="SmartPortfel to polska aplikacja do zarządzania budżetem domowym. Śledź wydatki, inwestycje i kredyty w jednym miejscu. Zacznij za darmo!" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:title" content="SmartPortfel – Budżet domowy i śledzenie wydatków | Darmowa aplikacja" />
+  <meta property="twitter:description"
+    content="SmartPortfel to polska aplikacja do zarządzania budżetem domowym. Śledź wydatki, inwestycje i kredyty w jednym miejscu. Zacznij za darmo!" />
+  <meta property="twitter:image" content="/og-image.png" />
+
+  <!-- Self-hosted fonts (FAZA 3): woff2 lokalnie zamiast render-blocking Google Fonts.
+       @font-face w bundlowanym CSS (src/fonts.css); preload krytycznego Outfit (body). -->
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/fonts/outfit-latin-QGYvz_MVcBeNP4NJtEtq.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/fonts/outfit-latin-ext-QGYvz_MVcBeNP4NJuktqQ4E.woff2">
+
+  <!-- Schema.org Structured Data -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SmartPortfel",
+      "description": "Inteligentny asystent finansowy do zarządzania budżetem domowym"
+    }
+    </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SmartPortfel",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "PLN"
+      },
+      "description": "SmartPortfel to polska aplikacja do zarządzania budżetem domowym. Śledź wydatki, inwestycje i kredyty w jednym miejscu. Zacznij za darmo!"
+    }
+    </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

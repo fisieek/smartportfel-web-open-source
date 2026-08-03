@@ -1,0 +1,28 @@
+# Konfiguracja gitleaks — skan sekretów w CI (.github/workflows/ci.yml).
+#
+# Zasada: wyjątki wpisujemy WĄSKO (konkretny plik, konkretny wzorzec), nigdy
+# całymi katalogami. Szeroki wyjątek prędzej czy później przepuści prawdziwy sekret.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Znane, świadome trafienia — same placeholdery i wartości testowe"
+
+paths = [
+    # Szablony konfiguracji: same puste stringi i przykładowe adresy.
+    '''(^|/)\.env\.example$''',
+    # Zbudowane paczki i zależności — nie są źródłem prawdy.
+    '''(^|/)node_modules/''',
+    '''(^|/)dist/''',
+    '''(^|/)build/''',
+    '''(^|/)pnpm-lock\.yaml$''',
+]
+
+regexes = [
+    # Sekrety wstrzykiwane testom w apps/server/vitest.config.ts. Nazwane wprost
+    # „only-for-tests", nie działają nigdzie poza vitestem.
+    '''vitest-[a-z-]+-only-for-tests-[0-9]+''',
+    # Adresy-atrapy do bazy w CI i w szablonach (nieistniejący host).
+    '''postgresql://(ci:ci|user:password)@''',
+]

@@ -1,0 +1,368 @@
+/* ============ SmartPortfel — ekrany auth (login / rejestracja) ============
+   Tokeny i prymitywy przepisane 1:1 z components/LandingV2/landing.css:3-175.
+   Świadomie NIE importujemy landing.css — ma 677 linii i scope `.lp`, który
+   narzuca background/font-family na cały wrapper. Tu potrzebujemy tylko aurory,
+   ziarna i kilku keyframes'ów. Jeśli zmienisz paletę na landingu, zmień i tutaj. */
+
+.auth {
+  --auth-bg: #050507;
+  --auth-surface: rgba(255, 255, 255, 0.04);
+  --auth-border: rgba(255, 255, 255, 0.08);
+  --auth-text: #f5f5f7;
+  --auth-muted: rgba(245, 245, 247, 0.55);
+  --auth-emerald: #34d399;
+  --auth-cyan: #22d3ee;
+  --auth-violet: #a78bfa;
+  background: var(--auth-bg);
+  color: var(--auth-text);
+}
+
+.auth-display {
+  font-family: 'Space Grotesk', 'Outfit', system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+/* ---- Aurora (kopia .lp-aurora__blob / lp-drift) ---- */
+.auth-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-aurora__blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+/* Panel auth jest o połowę węższy od landingu, więc blobów jest mniej widać —
+   stąd większe promienie i mniejsze wyjście poza kadr niż w .lp-aurora. */
+.auth-aurora__blob--1 {
+  width: 105%;
+  aspect-ratio: 1;
+  left: -14%;
+  top: -18%;
+  background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.55), transparent 65%);
+}
+
+.auth-aurora__blob--2 {
+  width: 92%;
+  aspect-ratio: 1;
+  right: -18%;
+  top: 6%;
+  background: radial-gradient(circle at 60% 40%, rgba(34, 211, 238, 0.45), transparent 65%);
+}
+
+.auth-aurora__blob--3 {
+  width: 88%;
+  aspect-ratio: 1;
+  left: 10%;
+  bottom: -26%;
+  background: radial-gradient(circle at 50% 50%, rgba(167, 139, 250, 0.4), transparent 65%);
+}
+
+@keyframes auth-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, -5%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(-5%, 6%, 0) scale(0.95);
+  }
+}
+
+/* ---- Film grain (kopia .lp-grain::after) ---- */
+.auth-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-size: 256px 256px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- Ilustracja „Horyzont" ---- */
+.auth-horizon-line {
+  /* 1000 z zapasem > realna długość ścieżki; stan domyślny = narysowana. */
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 0;
+}
+
+.auth-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+}
+
+.auth-dot {
+  box-shadow:
+    0 0 0 5px rgba(34, 211, 238, 0.16),
+    0 0 22px rgba(34, 211, 238, 0.75);
+}
+
+/* ---- Ilustracja „Stos kart" (ekran logowania) ---- */
+.auth-deck {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1100px;
+}
+
+.auth-deck__card {
+  position: absolute;
+  width: 55%;
+  max-width: 380px;
+  padding: 15px 17px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(14, 16, 22, 0.96), rgba(8, 10, 14, 0.99));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 30px 60px -24px rgba(0, 0, 0, 0.9),
+    0 0 60px -26px var(--auth-deck-glow, rgba(52, 211, 153, 0.5));
+  transform-style: preserve-3d;
+  /* Stan domyślny = docelowy układ talii. Wejście dokłada się w `no-preference`. */
+  transform: rotateY(19deg) rotateX(7deg) translate3d(var(--auth-deck-x), var(--auth-deck-y), var(--auth-deck-z))
+    scale(var(--auth-deck-s, 1));
+}
+
+.auth-deck__card--back {
+  --auth-deck-x: -22%;
+  --auth-deck-y: 120px;
+  --auth-deck-z: -80px;
+  --auth-deck-s: 0.86;
+  --auth-deck-glow: rgba(167, 139, 250, 0.5);
+}
+
+.auth-deck__card--mid {
+  --auth-deck-x: -5%;
+  --auth-deck-y: 40px;
+  --auth-deck-z: -20px;
+  --auth-deck-s: 0.93;
+  --auth-deck-glow: rgba(34, 211, 238, 0.5);
+}
+
+.auth-deck__card--front {
+  --auth-deck-x: 13%;
+  --auth-deck-y: -70px;
+  --auth-deck-z: 40px;
+  --auth-deck-glow: rgba(52, 211, 153, 0.55);
+}
+
+.auth-deck__chrome {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.auth-deck__chrome i {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.auth-deck__bar {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.auth-deck__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #0d9488, #14b8a6, #22d3ee);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.5);
+}
+
+/* ---- Karty planów (odpowiednik .lp-glow-card) ---- */
+.auth-card {
+  position: relative;
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-border);
+  border-radius: 20px;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s;
+}
+
+.auth-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-4px);
+}
+
+.auth-card--highlight {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* ---- Przyciski (kopia .lp-btn-primary / .lp-btn-ghost) ---- */
+.auth-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: #f5f5f7;
+  color: #09090b;
+  font-weight: 600;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px rgba(52, 211, 153, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.auth-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--auth-border);
+  color: var(--auth-text);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s, background 0.3s, transform 0.3s;
+}
+
+.auth-btn-ghost:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+/* ---- Wejście ----
+   Ta sama konstrukcja co hero landinga (landing.css:277): stan DOMYŚLNY każdego
+   elementu to stan KOŃCOWY, a całe wejście siedzi w `no-preference`. Dzięki temu
+   brak animacji nigdy nie oznacza pustego ekranu — animacja tylko dokłada ruch. */
+
+@keyframes auth-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Delikatne unoszenie wierzchniej karty — powtarza `--auth-deck-*` z jej klasy,
+   bo keyframes nadpisują cały `transform`. */
+@keyframes auth-deck-float {
+  0%,
+  100% {
+    transform: rotateY(19deg) rotateX(7deg) translate3d(13%, -70px, 40px);
+  }
+  50% {
+    transform: rotateY(15deg) rotateX(5deg) translate3d(13%, -84px, 60px);
+  }
+}
+
+@keyframes auth-deck-in {
+  from {
+    opacity: 0;
+    transform: rotateY(19deg) rotateX(7deg)
+      translate3d(var(--auth-deck-x), calc(var(--auth-deck-y) + 26px), var(--auth-deck-z))
+      scale(var(--auth-deck-s, 1));
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes auth-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-aurora__blob {
+    animation: auth-drift 22s ease-in-out infinite alternate;
+  }
+  .auth-aurora__blob--2 {
+    animation-delay: -7s;
+    animation-duration: 26s;
+  }
+  .auth-aurora__blob--3 {
+    animation-delay: -14s;
+    animation-duration: 30s;
+  }
+
+  .auth [data-auth] {
+    /* odpowiednik power3.out — ten sam easing co wejście hero */
+    animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+    animation-delay: var(--auth-delay, 0s);
+    animation-fill-mode: backwards;
+    animation-duration: 0.8s;
+  }
+
+  .auth [data-auth='line'] {
+    animation-name: auth-draw;
+    animation-duration: 1.6s;
+  }
+  .auth [data-auth='area'] {
+    animation-name: auth-fade;
+    animation-duration: 1.4s;
+  }
+  .auth [data-auth='pill'] {
+    animation-name: auth-rise;
+  }
+  .auth [data-auth='tick'] {
+    animation-name: auth-fade;
+  }
+
+  .auth-dot {
+    animation: auth-pulse 3.5s ease-in-out infinite;
+    /* dopiero po dorysowaniu krzywej */
+    animation-delay: 1.4s;
+  }
+
+  .auth-deck__card {
+    animation: auth-deck-in 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) backwards;
+    animation-delay: var(--auth-delay, 0s);
+  }
+
+  /* Wierzchnia karta po wejściu przechodzi w pętlę unoszenia. */
+  .auth-deck__card--front {
+    animation:
+      auth-deck-in 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) backwards,
+      auth-deck-float 8s ease-in-out 1s infinite;
+  }
+}

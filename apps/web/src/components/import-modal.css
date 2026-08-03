@@ -1,0 +1,121 @@
+/* ============ Import modal — premium look (port wzorców z LandingV2) ============ */
+/* Scoped pod .im-scope, by nie ładować całego landing.css (lazy-chunk) ani nie
+   wyciekać globalnie. Akcenty: emerald → cyan → violet jak na LandingV2. */
+
+.im-scope {
+  --im-surface: rgba(255, 255, 255, 0.04);
+  --im-border: rgba(255, 255, 255, 0.08);
+  --im-emerald: #34d399;
+  --im-cyan: #22d3ee;
+  --im-violet: #a78bfa;
+}
+
+/* ---- Aurora (pas górny modala) ---- */
+/* Pas o stałej wysokości u góry — nie rozciąga się na całą (wysoką) tabelę. */
+.im-aurora {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 420px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.im-aurora__blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.30;
+  will-change: transform;
+  animation: im-drift 24s ease-in-out infinite alternate;
+}
+.im-aurora__blob--1 {
+  width: 46%; height: 70%; left: -10%; top: -24%;
+  background: radial-gradient(circle at 30% 30%, rgba(52, 211, 153, 0.55), transparent 65%);
+}
+.im-aurora__blob--2 {
+  width: 42%; height: 70%; right: -12%; top: -16%;
+  background: radial-gradient(circle at 60% 40%, rgba(34, 211, 238, 0.45), transparent 65%);
+  animation-delay: -8s; animation-duration: 28s;
+}
+.im-aurora__blob--3 {
+  width: 40%; height: 70%; left: 28%; bottom: -34%;
+  background: radial-gradient(circle at 50% 50%, rgba(167, 139, 250, 0.40), transparent 65%);
+  animation-delay: -15s; animation-duration: 32s;
+}
+@keyframes im-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(4%, -6%, 0) scale(1.12); }
+  100% { transform: translate3d(-4%, 5%, 0) scale(0.95); }
+}
+
+/* ---- Animowany gradient tekstu ---- */
+.im-gradient-text {
+  background: linear-gradient(100deg, #34d399 0%, #22d3ee 30%, #a78bfa 60%, #34d399 100%);
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: im-gradient-pan 7s linear infinite;
+}
+@keyframes im-gradient-pan { to { background-position: 240% 0; } }
+
+/* ---- Glow card ---- */
+.im-glow-card {
+  position: relative;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: border-color 0.4s;
+}
+.im-glow-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(620px circle at 50% -10%, rgba(52, 211, 153, 0.10), transparent 55%);
+  opacity: 0.55;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.im-glow-card:hover { border-color: rgba(255, 255, 255, 0.16); }
+.im-glow-card:hover::before { opacity: 1; }
+
+/* ---- Dropzone ---- */
+.im-dropzone {
+  position: relative;
+  border-radius: 24px;
+  border: 1.5px dashed var(--im-border);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.3s, background 0.3s;
+  overflow: hidden;
+}
+.im-dropzone:hover { border-color: rgba(52, 211, 153, 0.40); background: rgba(52, 211, 153, 0.03); }
+.im-dropzone--drag { border-color: var(--im-emerald); background: rgba(52, 211, 153, 0.07); }
+
+/* ---- Premium primary button (Smart-analiza / Import) ---- */
+.im-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(100deg, #34d399, #22d3ee);
+  color: #06110d;
+  font-weight: 800;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, filter 0.3s;
+}
+.im-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(52, 211, 153, 0.35), 0 2px 8px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.05);
+}
+.im-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .im-aurora__blob,
+  .im-gradient-text { animation: none; }
+}

@@ -1,0 +1,49 @@
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+
+# Public pages
+Allow: /login
+Allow: /register
+Allow: /regulamin
+Allow: /polityka-prywatnosci
+Allow: /polityka-cookies
+Allow: /kalkulatory
+
+# Block authenticated areas (dashboard, settings, etc.)
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /expenses
+Disallow: /accounts
+Disallow: /planning
+Disallow: /settings
+Disallow: /settings/
+Disallow: /transactions
+Disallow: /mortgage
+Disallow: /investments
+
+# Block API endpoints
+Disallow: /api/
+
+# AI Crawlers
+User-agent: GPTBot
+Disallow: /dashboard
+Disallow: /api/
+
+User-agent: Claude-Web
+Disallow: /dashboard
+Disallow: /api/
+
+User-agent: PerplexityBot
+Disallow: /dashboard
+Disallow: /api/
+
+User-agent: Google-Extended
+Disallow: /dashboard
+Disallow: /api/
+
+# Sitemap: linia wymaga adresu BEZWZGLĘDNEGO, a ten plik jest ten sam dla każdej
+# instancji — nie da się jej wypełnić sensownie w repozytorium. Stawiasz to pod własną
+# domeną? Dopisz tu:  Sitemap: https://twoja-domena.pl/sitemap.xml
+# (samą sitemapę serwer generuje pod /sitemap.xml, gdy ustawisz CLIENT_URL).
