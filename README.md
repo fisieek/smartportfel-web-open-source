@@ -8,6 +8,45 @@
 > **The interface, the code comments and the documentation are in Polish**, because the product
 > is built for Polish users and their tax and pension rules.
 
+## Jak to wygląda
+
+![Pulpit SmartPortfela](docs/screenshots/01-budzet.png)
+
+*Pulpit — salda kont, wydatki miesiąca, wartość portfela i podsumowanie majątku.*
+
+<details>
+<summary><b>Więcej zrzutów ekranu</b></summary>
+
+<br>
+
+![Transakcje](docs/screenshots/02-transakcje.png)
+
+*Transakcje z kategoriami i filtrami, obok panel planowania miesiąca.*
+
+![Dodawanie transakcji](docs/screenshots/03-dodaj-transakcje.png)
+
+*Dodawanie wydatku — konto, sklep, notatka, opcja transakcji powtarzalnej.*
+
+![Inwestycje](docs/screenshots/04-inwestycje.png)
+
+*Portfel — alokacja aktywów, zysk realny i wartość w czasie.*
+
+![Oszczędności](docs/screenshots/05-oszczednosci.png)
+
+*Konta oszczędnościowe, lokaty terminowe i cele z postępem.*
+
+![Kredyty](docs/screenshots/06-kredyty.png)
+
+*Kredyt hipoteczny — postęp spłaty, rozbicie na kapitał i odsetki, historia rat.*
+
+![PPK](docs/screenshots/07-ppk.png)
+
+*PPK — wkład własny, dopłaty pracodawcy i państwa, wzrost w czasie.*
+
+</details>
+
+<sub>Wszystkie zrzuty pochodzą z konta demonstracyjnego — dane są zmyślone.</sub>
+
 ## Co potrafi
 
 - **Wydatki i przychody** — ręcznie albo importem z CSV/XLSX, z kategoryzacją i regułami sklepów
