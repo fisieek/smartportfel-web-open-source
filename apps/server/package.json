@@ -20,7 +20,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@prisma/client": "^5.22.0",
     "@smartportfel/contracts": "workspace:*",
     "@smartportfel/shared": "workspace:*",
